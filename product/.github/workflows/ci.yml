@@ -1,0 +1,73 @@
+# Pipeline de CI: style -> unit -> e2e -> docker.
+# Cada trabajo es una etapa visible en la pestaña Actions.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  style:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Instalar dependencias
+        run: pip install -r requirements-dev.txt -c constraints.txt
+      - name: Pylint con 88 columnas
+        run: >
+          python -m pylint app tests --max-line-length=88 --fail-under=10
+          --disable=missing-function-docstring,redefined-outer-name,too-few-public-methods
+
+  unit:
+    needs: style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Instalar dependencias
+        run: pip install -r requirements-dev.txt -c constraints.txt
+      - name: Pruebas y BDD con cobertura
+        run: python -m pytest tests --cov=app --cov-report=term-missing --cov-fail-under=80
+
+  e2e:
+    needs: unit
+    runs-on: ubuntu-latest
+    env:
+      # Clave de prueba de ejemplo: no es una clave real.
+      E2E_API_KEY: ci-test-key-0123456789abcdef
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Instalar dependencias
+        run: pip install -r requirements-dev.txt -c constraints.txt
+      - name: Instalar Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Arrancar el producto con el modelo simulado
+        env:
+          MODEL_PROVIDER: fake
+          API_KEYS: ci:ci-test-key-0123456789abcdef
+        run: |
+          nohup python -m uvicorn app.main:app --port 8769 > server.log 2>&1 &
+          for _ in $(seq 1 30); do
+            curl -fs http://127.0.0.1:8769/health && exit 0
+            sleep 1
+          done
+          cat server.log
+          exit 1
+      - name: Pruebas de punta a punta
+        run: python -m pytest e2e -q --base-url http://127.0.0.1:8769
+
+  docker:
+    needs: e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Construir la imagen
+        run: docker build -t hr-assistant .

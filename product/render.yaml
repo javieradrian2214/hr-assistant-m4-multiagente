@@ -1,0 +1,35 @@
+# Blueprint de Render. El nombre es el del repositorio.
+# Los secretos llevan sync: false: se escriben en Render, nunca aquí.
+# La clave de trazas es opcional y no va en este archivo: se agrega en
+# Render > Environment si se encienden las trazas.
+# Las variables que no aparecen usan el valor por omisión de app/config.py,
+# el mismo que documenta .env.example.
+services:
+  - type: web
+    name: hr-assistant
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: MODEL_PROVIDER
+        value: gateway
+      - key: ORCHESTRATION
+        value: multi
+      - key: HIDE_INPUTS
+        value: "true"
+      - key: HIDE_OUTPUTS
+        value: "true"
+      - key: EMPLOYEES_PATH
+        value: data/employees.json
+      - key: API_KEYS
+        sync: false
+      - key: CF_ACCOUNT_ID
+        sync: false
+      - key: CF_API_TOKEN
+        sync: false
+      # Se pide en Render; si queda vacía, la aplicación usa "default".
+      - key: CF_GATEWAY_ID
+        sync: false

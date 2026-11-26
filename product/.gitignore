@@ -1,0 +1,24 @@
+# Secretos: .env y cualquier variante (.env.local, .env.production...).
+# .env.example sí se versiona: documenta las variables y lo leen las pruebas.
+.env
+.env.*
+!.env.example
+
+# Entornos virtuales: .venv, .venv312 y cualquier .venv* en cualquier nivel.
+.venv/
+.venv*/
+venv/
+
+# Cachés de Python y de herramientas
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pylint.d/
+.mypy_cache/
+.ruff_cache/
+
+# Cobertura
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/

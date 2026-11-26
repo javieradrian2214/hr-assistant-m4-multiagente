@@ -1,0 +1,75 @@
+# La imagen solo copia requirements.txt, app/ y data/. Todo lo demás se
+# excluye del contexto: la construcción es más rápida y nada sobrante (ni
+# secretos) puede colarse por error. No excluir requirements.txt, app/ ni data/.
+#
+# En .dockerignore un patrón sin "**/" solo aplica a la raíz del contexto;
+# por eso cada exclusión aparece también con "**/" para los subdirectorios.
+
+# Secretos. .env.example tampoco entra: la aplicación no lo lee en ejecución
+# (solo lo usan las pruebas, que no van en la imagen).
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Pruebas y verificación: no van en la imagen
+tests/
+e2e/
+conftest.py
+pytest.ini
+.pylintrc
+pyproject.toml
+setup.cfg
+
+# Dependencias de desarrollo: la imagen instala solo requirements.txt
+requirements-dev.txt
+
+# Entornos virtuales y dependencias locales (.venv, .venv312, venv...)
+.venv/
+.venv*
+**/.venv*
+venv/
+**/venv/
+
+# Cachés de Python y de herramientas
+__pycache__/
+**/__pycache__/
+*.pyc
+**/*.py[cod]
+.pytest_cache/
+**/.pytest_cache/
+.pylint.d/
+.mypy_cache/
+**/.mypy_cache/
+.ruff_cache/
+**/.ruff_cache/
+
+# Cobertura
+.coverage
+.coverage.*
+**/.coverage
+**/.coverage.*
+coverage.xml
+htmlcov/
+
+# Control de versiones y CI
+.git/
+.gitignore
+.github/
+.claude/
+
+# Documentación, scripts y despliegue: no se usan en ejecución.
+# Docker lee Dockerfile y .dockerignore aunque estén excluidos aquí.
+doc/
+docs/
+scripts/
+README.md
+render.yaml
+Dockerfile
+.dockerignore
+
+# Logs locales y archivos de editores
+*.log
+**/*.log
+.vscode/
+.idea/

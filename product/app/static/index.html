@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>HR Assistant</title>
+<style>
+  body { font-family: sans-serif; max-width: 640px; margin: 2rem auto; }
+  #answer { border: 1px solid #ccc; min-height: 200px; padding: 0.5rem; }
+  .user { color: #036; margin: 0.4rem 0; }
+  .assistant { color: #060; margin: 0.4rem 0; }
+  .tools { font-size: 0.8rem; color: #666; }
+  .error { color: #a00; }
+  input { width: 75%; padding: 0.4rem; }
+</style>
+</head>
+<body>
+<h1>HR Assistant</h1>
+<p>
+  <input type="password" data-testid="api-key" placeholder="Clave de acceso"
+         autocomplete="off">
+</p>
+<div id="answer" data-testid="answer"></div>
+<p>
+  <input type="text" data-testid="question" placeholder="Escribe tu pregunta">
+  <button data-testid="send">Enviar</button>
+</p>
+<script>
+  const STORAGE_KEY = "hr-assistant-history";
+  const KEY_STORAGE = "hr-assistant-api-key";
+  const log = document.querySelector('[data-testid="answer"]');
+  const input = document.querySelector('[data-testid="question"]');
+  const keyInput = document.querySelector('[data-testid="api-key"]');
+  const button = document.querySelector('[data-testid="send"]');
+
+  // La clave y el historial viven solo en sessionStorage: se borran al
+  // cerrar la pestaña y no hay ninguna clave escrita en esta página.
+  keyInput.value = sessionStorage.getItem(KEY_STORAGE) || "";
+
+  function loadHistory() {
+    try {
+      return JSON.parse(sessionStorage.getItem(STORAGE_KEY)) || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveHistory(history) {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+  }
+
+  function addLine(cssClass, text) {
+    const line = document.createElement("div");
+    line.className = cssClass;
+    line.textContent = text;
+    log.appendChild(line);
+  }
+
+  function rejectionMessage(response) {
+    if (response.status === 401) {
+      return "Clave inválida";
+    }
+    if (response.status === 429) {
+      const seconds = response.headers.get("Retry-After") || "unos";
+      return "Demasiadas preguntas; espera " + seconds + " segundos";
+    }
+    return null;
+  }
+
+  async function send() {
+    const question = input.value.trim();
+    if (!question) {
+      addLine("error", "Escribe una pregunta.");
+      return;
+    }
+    const apiKey = keyInput.value.trim();
+    sessionStorage.setItem(KEY_STORAGE, apiKey);
+    const history = loadHistory();
+    addLine("user", question);
+    input.value = "";
+    try {
+      const response = await fetch("/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+        body: JSON.stringify({ question: question, history: history }),
+      });
+      if (!response.ok) {
+        const rejection = rejectionMessage(response);
+        if (rejection) {
+          addLine("error", rejection);
+          return;
+        }
+        addLine("error", "No se pudo obtener la respuesta (error " +
+          response.status + "). request_id: " +
+          response.headers.get("X-Request-ID"));
+        return;
+      }
+      const data = await response.json();
+      addLine("assistant", data.answer);
+      addLine("tools", "request_id: " + data.request_id);
+      addLine("tools", "Herramientas usadas: " +
+        (data.tools_used.length ? data.tools_used.join(", ") : "ninguna"));
+      history.push({ role: "user", content: question });
+      history.push({ role: "assistant", content: data.answer });
+      saveHistory(history);
+    } catch (e) {
+      addLine("error", "No se pudo conectar con el servidor.");
+    }
+  }
+
+  button.addEventListener("click", send);
+  input.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") { send(); }
+  });
+</script>
+</body>
+</html>

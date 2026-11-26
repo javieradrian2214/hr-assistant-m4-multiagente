@@ -1,0 +1,7 @@
+# Dependencias de produccion del HR Assistant (versiones exactas).
+# Las herramientas de pruebas y estilo viven en requirements-dev.txt.
+fastapi==0.165.0
+uvicorn==0.54.0
+pydantic==2.14.4
+httpx==0.28.1
+langsmith==0.16.0
